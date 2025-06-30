@@ -1,0 +1,48 @@
+name: Deploy to Live Server
+
+on:
+  push:
+    branches:
+      - main  # শুধুমাত্র main ব্রাঞ্চে পুশ করলে এই অ্যাকশনটি রান হবে
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy to Server
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} -p ${{ secrets.PORT }} << 'EOF'
+          echo ">>> Connecting to server..."
+          cd /home/academy.banglachatbot.com/public_html
+          echo ">>> Pulling latest code from main branch..."
+          git pull origin main
+          
+          echo ">>> Creating .env file if it does not exist..."
+          if [ ! -f .env ]; then
+            cp .env.example .env
+            /usr/local/lsws/lsphp83/bin/php artisan key:generate
+            echo ".env file created and key generated."
+          fi
+          
+          echo ">>> Installing Composer dependencies..."
+          /usr/local/lsws/lsphp83/bin/php /usr/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          
+          echo ">>> Running database migrations..."
+          /usr/local/lsws/lsphp83/bin/php artisan migrate --force
+          
+          echo ">>> Caching configuration..."
+          /usr/local/lsws/lsphp83/bin/php artisan config:cache
+          /usr/local/lsws/lsphp83/bin/php artisan route:cache
+          /usr/local/lsws/lsphp83/bin/php artisan view:cache
+          
+          echo ">>> Deployment successful!"
+        EOF
