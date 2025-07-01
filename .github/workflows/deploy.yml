@@ -30,7 +30,7 @@ jobs:
           
           # Move or copy the files
           mkdir -p /var/www/academy.banglachatbot.com  # যদি folder না থাকে
-          cp -r ./_work/bcbacademy/bcbacademy/* /var/www/academy.banglachatbot.com/
+          cp -fr /home/whmroot/actions-runner/_work/bcbacademy/bcbacademy/* /var/www/academy.banglachatbot.com/
 
       # Step 4: Verify the files are copied
       - name: Verify files in the target directory
