@@ -1,50 +1,24 @@
-name: Deploy to Live Server
+# ... (steps এর আগে)
 
-on:
-  push:
-    branches:
-      - main
+steps:
+- name: Checkout code
+  uses: actions/checkout@v3
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+- name: Setup SSH
+  # ... (আগের মতোই)
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.4
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Add Host to Known Hosts
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -p ${{ secrets.PORT }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
-        echo "Host key for ${{ secrets.HOST }} added to known_hosts"
-
-    - name: Deploy to Server
-      run: |
-        echo ">>> Attempting to deploy to ${{ secrets.HOST }} as user ${{ secrets.USERNAME }} on port ${{ secrets.PORT }}"
-        ssh -v -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-          echo ">>> Successfully connected to server!"
-          echo ">>> Changing directory to /var/www/academy.banglachatbot.com"
-          cd /var/www/academy.banglachatbot.com
-          
-          echo ">>> Pulling latest code from main branch..."
-          git pull origin main
-          
-          echo ">>> Installing Composer dependencies..."
-          /usr/bin/php8.3 /usr/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-          
-          echo ">>> Running database migrations..."
-          /usr/bin/php8.3 artisan migrate --force
-          
-          echo ">>> Caching configuration..."
-          /usr/bin/php8.3 artisan config:cache
-          /usr/bin/php8.3 artisan route:cache
-          /usr/bin/php8.3 artisan view:cache
-          
-          echo ">>> Deployment successful!"
-        EOF
+- name: Deploy to Server
+  run: |
+    ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} -p ${{ secrets.PORT }} << 'EOF'
+      cd /var/www/academy.banglachatbot.com
+      git pull origin main
+      
+      # .env ফাইল তৈরি করা (যদি না থাকে)
+      if [ ! -f .env ]; then
+        cp .env.example .env
+        /usr/bin/php8.3 artisan key:generate
+        echo ".env file created and key generated."
+      fi
+      
+      # ... (বাকি কমান্ডগুলো)
+    EOF
