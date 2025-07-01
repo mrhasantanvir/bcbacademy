@@ -1,50 +1,38 @@
-name: Deploy to Live Server
+# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Production CI/CD 
 
 on:
   push:
-    branches:
-      - main
+    branches: [production]
 
 jobs:
-  deploy:
-    runs-on: [ubuntu-latest, deploy]
+  build:
+    runs-on: [self-hosted, production]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # Step 1: Code checkout
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.5.4
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # Step 2: Setup runner or install dependencies (যদি প্রয়োজন হয়)
+      - name: Setup Runner
+        run: |
+          # যেকোনো অতিরিক্ত dependency ইন্সটল করতে পারেন
+          echo "Setting up necessary environment"
 
-    - name: Add Host to Known Hosts
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -p ${{ secrets.PORT }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
-        echo "Host key for ${{ secrets.HOST }} added to known_hosts"
+      # Step 3: Files copy or move
+      - name: Copy files to another directory
+        run: |
+          # প্রথমে নিশ্চিত হয়ে নিন যে /var/www/academy.banglachatbot.com ফোল্ডারটি আছে
+          echo "Copying files from the runner's working directory to another directory"
+          
+          # Move or copy the files
+          mkdir -p /var/www/academy.banglachatbot.com  # যদি folder না থাকে
+          cp -r ./_work/bcbacademy/bcbacademy/* /var/www/academy.banglachatbot.com/
 
-    - name: Deploy to Server
-      run: |
-        echo ">>> Attempting to deploy to ${{ secrets.HOST }} as user ${{ secrets.USERNAME }} on port ${{ secrets.PORT }}"
-        ssh -v -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-          echo ">>> Successfully connected to server!"
-          echo ">>> Changing directory to /var/www/academy.banglachatbot.com"
-          cd /var/www/academy.banglachatbot.com
-          
-          echo ">>> Pulling latest code from main branch..."
-          git pull origin main
-          
-          echo ">>> Installing Composer dependencies..."
-          /usr/bin/php8.3 /usr/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-          
-          echo ">>> Running database migrations..."
-          /usr/bin/php8.3 artisan migrate --force
-          
-          echo ">>> Caching configuration..."
-          /usr/bin/php8.3 artisan config:cache
-          /usr/bin/php8.3 artisan route:cache
-          /usr/bin/php8.3 artisan view:cache
-          
-          echo ">>> Deployment successful!"
-        EOF
+      # Step 4: Verify the files are copied
+      - name: Verify files in the target directory
+        run: |
+          ls /var/www/academy.banglachatbot.com/
