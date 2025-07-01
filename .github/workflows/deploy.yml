@@ -1,24 +1,52 @@
-# ... (steps এর আগে)
+name: Deploy to Live Server
 
-steps:
-- name: Checkout code
-  uses: actions/checkout@v3
+# এই Workflow টি শুধুমাত্র 'main' ব্রাঞ্চে পুশ করলে রান হবে
+on:
+  push:
+    branches:
+      - main
 
-- name: Setup SSH
-  # ... (আগের মতোই)
+jobs:
+  deploy:
+    # Workflow টি GitHub-এর একটি ভার্চুয়াল Ubuntu সার্ভারে রান হবে
+    runs-on: ubuntu-latest
 
-- name: Deploy to Server
-  run: |
-    ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} -p ${{ secrets.PORT }} << 'EOF'
-      cd /var/www/academy.banglachatbot.com
-      git pull origin main
-      
-      # .env ফাইল তৈরি করা (যদি না থাকে)
-      if [ ! -f .env ]; then
-        cp .env.example .env
-        /usr/bin/php8.3 artisan key:generate
-        echo ".env file created and key generated."
-      fi
-      
-      # ... (বাকি কমান্ডগুলো)
-    EOF
+    steps:
+    # ধাপ ১: GitHub রিপোজিটরি থেকে কোড ডাউনলোড করা
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # ধাপ ২: SSH Agent সেটআপ করা এবং সার্ভারের প্রাইভেট কী লোড করা
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    # ধাপ ৩: সার্ভারের হোস্ট কী-কে 'known_hosts' ফাইলে যোগ করা (নিরাপত্তার জন্য)
+    - name: Add Host to Known Hosts
+      run: ssh-keyscan -p ${{ secrets.PORT }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+
+    # ধাপ ৪: লাইভ সার্ভারে কানেক্ট করে ডিপ্লয়মেন্ট কমান্ডগুলো রান করা
+    - name: Deploy to Server
+      run: |
+        echo ">>> Deploying to ${{ secrets.HOST }} as user ${{ secrets.USERNAME }} on port ${{ secrets.PORT }}"
+        ssh -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+          echo ">>> Connected to server. Changing directory..."
+          cd /var/www/academy.banglachatbot.com
+          
+          echo ">>> Pulling latest code from main branch..."
+          git pull origin main
+          
+          echo ">>> Installing/Updating Composer dependencies..."
+          /usr/bin/php8.3 /usr/bin/composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          
+          echo ">>> Running database migrations..."
+          /usr/bin/php8.3 artisan migrate --force
+          
+          echo ">>> Caching configuration for production..."
+          /usr/bin/php8.3 artisan config:cache
+          /usr/bin/php8.3 artisan route:cache
+          /usr/bin/php8.3 artisan view:cache
+          
+          echo ">>> Deployment successful!"
+        EOF
