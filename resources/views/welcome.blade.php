@@ -14,7 +14,7 @@
 <body>
     <div class="welcome-box">
         <h1>BCB Academy</h1>
-        <p>আমাদের লার্নিং ম্যানেজমেন্ট সিস্টেমটি শীঘ্রই আসছে! apdate</p>
+        <p>আমাদের লার্নিং ম্যানেজমেন্ট সিস্টেমটি শীঘ্রই আসছে! apdate1</p>
     </div>
 </body>
 </html>
