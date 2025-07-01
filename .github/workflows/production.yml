@@ -1,0 +1,13 @@
+name: Download Latest Commit Files
+on:
+  push:
+    branches:
+      - main
+jobs:
+  download_files:
+    runs-on: [ubuntu-latest, production]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: List files
+        run: ls -R
