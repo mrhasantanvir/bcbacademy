@@ -31,7 +31,7 @@ jobs:
           # Move or copy the files
           mkdir -p /var/www/academy.banglachatbot.com  # যদি folder না থাকে
           sudo cp -fr /home/whmroot/actions-runner/_work/bcbacademy/bcbacademy/* /var/www/academy.banglachatbot.com/
-          sudo chown -R www-data:www-data /var/www/academy.banglachatbot.com/*gi
+          sudo chown -R www-data:www-data /var/www/academy.banglachatbot.com/*
 
       # Step 4: Verify the files are copied
       - name: Verify files in the target directory
