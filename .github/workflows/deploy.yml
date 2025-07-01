@@ -19,7 +19,8 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Add Host to Known Hosts
-      run: ssh-keyscan -p ${{ secrets.PORT }} -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+      # ssh-keyscan কমান্ডটি এখন সঠিক ফরম্যাটে লেখা হয়েছে
+      run: ssh-keyscan -p ${{ secrets.PORT }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
     - name: Deploy to Server
       run: |
